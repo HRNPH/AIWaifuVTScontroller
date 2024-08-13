@@ -76,7 +76,7 @@ class AudioProcessor:
     def amplify_calculation(self, audio_chunk: np.ndarray) -> float:
         # Calculate amplitude based on the audio chunk
         amplitude = np.max(np.abs(audio_chunk))
-        amplitude = float(amplitude) + 0.5
+        amplitude = (float(amplitude) + 0.5) * 1 + np.mean(np.abs(audio_chunk)) * 0.5
         # Max amplitude is 1.0
         amplitude = min(amplitude, 1.0)
         amplitude = max(amplitude, 0.0)
@@ -208,6 +208,6 @@ class VTSAudioController:
             await self.update_mouth_based_on_phonemes(classified_phoneme, amp_factor=amp)
 
             # Wait for the audio chunk to finish playing
-            time.sleep(wait_for * 0.75)
+            time.sleep(wait_for)
 
         await self.close()
