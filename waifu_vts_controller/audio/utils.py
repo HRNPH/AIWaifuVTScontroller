@@ -1,3 +1,6 @@
+import numpy as np
+import soundcard as sc
+
 class AudioPlayer:
     @staticmethod
     def play_audio_chunk(chunk: np.ndarray, sample_rate: int):
