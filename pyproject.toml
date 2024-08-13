@@ -12,6 +12,13 @@ python = "^3.10"
 websocket-client = "^1.8.0"
 requests = "^2.32.3"
 pyvts = "^0.3.2"
+scipy = "^1.14.0"
+numpy = "^2.0.1"
+asyncio = "^3.4.3"
+soundfile = "^0.12.1"
+soundcard = "^0.4.3"
+librosa = "^0.10.2.post1"
+fastdtw = "^0.3.4"
 
 
 [build-system]
