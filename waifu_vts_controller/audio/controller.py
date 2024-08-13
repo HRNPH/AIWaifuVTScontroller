@@ -14,7 +14,7 @@ class AudioProcessor:
         self.n_mfcc = n_mfcc
         self.window_size = window_size
         self.hop_length = hop_length
-
+        
     def compute_mfcc(self, audio_data: np.ndarray) -> np.ndarray:
         # Normalize the audio data
         audio_data = audio_data / np.max(np.abs(audio_data))
@@ -147,7 +147,8 @@ class VTSAudioController:
     async def play_audio_with_mouth_movement(
         self,
         audio_path: Union[str, np.ndarray],
-        phoneme_files: Dict[str, str]
+        phoneme_files: Dict[str, str],
+        sleep_offset: float = 2.2,
     ):
         # Connect and set mouth parameters
         await self.connect()
@@ -166,7 +167,8 @@ class VTSAudioController:
             audio_data = audio_path
             sr = self.audio_processor.sample_rate
 
-        self.audio_processor.sample_rate = int(sr)
+        sr = int(sr)
+        self.audio_processor.sample_rate = sr
 
         # Define window and hop length in samples
         window_size_samples = int(self.audio_processor.window_size * sr)
@@ -176,11 +178,9 @@ class VTSAudioController:
         last_phoneme = None
         counter = 0
 
-        # Play Audio in background
-        asyncio.get_event_loop().run_in_executor(
-            None, AudioPlayer.play_audio_chunk, audio_data, sr
-        )
-        
+        # Start audio playback in background
+        asyncio.get_event_loop().run_in_executor(None, AudioPlayer.play_audio_chunk, audio_data, sr)
+
         # Process audio data in chunks
         for i in range(0, len(audio_data), hop_length_samples):
             wait_for = hop_length_samples / sr
@@ -204,10 +204,9 @@ class VTSAudioController:
 
             # Update mouth factor
             amp = self.audio_processor.amplify_calculation(segment)
-            print(amp)
             await self.update_mouth_based_on_phonemes(classified_phoneme, amp_factor=amp)
 
             # Wait for the audio chunk to finish playing
-            time.sleep(wait_for)
+            await asyncio.sleep(wait_for/sleep_offset)
 
         await self.close()
