@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "aiwaifuvtscontroller"
+name = "aiwaifu-vts-controller"
 version = "0.1.0"
 description = ""
 authors = ["hrnph <hrnph@protomail.com>"]
