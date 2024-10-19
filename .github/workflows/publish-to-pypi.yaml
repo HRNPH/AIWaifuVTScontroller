@@ -16,15 +16,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.12
+          python-version: 3.12.6  # Use the same version you're using locally
 
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Set PyPI token in Poetry
-        run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
 
       - name: Install dependencies
         run: poetry install --no-interaction --no-ansi
@@ -36,3 +33,8 @@ jobs:
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
         run: poetry publish --build --no-interaction --no-ansi -vvv
+
+      - name: Check Poetry Configuration (for debugging)
+        run: |
+          cat /home/runner/.config/pypoetry/config.toml || echo "No config.toml"
+          cat /home/runner/.config/pypoetry/auth.toml || echo "No auth.toml"
