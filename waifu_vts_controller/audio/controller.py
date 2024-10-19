@@ -115,6 +115,7 @@ class VTSAudioController:
     def __init__(self, vts: pyvts.vts, audio_processor: AudioProcessor):
         self.vts = vts
         self.audio_processor = audio_processor
+        self.phoneme_queue: asyncio.Queue = asyncio.Queue()
 
     async def connect(self):
         if (self.vts.get_authentic_status()) != 2:
@@ -175,8 +176,7 @@ class VTSAudioController:
     async def play_audio_with_mouth_movement(
         self,
         audio_path: Union[str, np.ndarray],
-        phoneme_files: Dict[Literal["a", "i", "u", "e", "o", "n"], str],
-        sleep_offset: float = 2.2,
+        phoneme_files: Dict[Literal["a", "i", "u", "e", "o", "n"], str]
     ):
         await self.connect()
         await self.set_mouth_parameters()
@@ -201,38 +201,42 @@ class VTSAudioController:
         window_size_samples = int(self.audio_processor.window_size * sr)
         hop_length_samples = int(self.audio_processor.hop_length * sr)
 
-        time_stamp = 0.0
-        last_phoneme = None
-        counter = 0
+        # Calculate the sleep time based on the hop length and sample rate
+        sleep_time = hop_length_samples / sr
 
-        # Start audio playback in a separate thread
-        asyncio.get_event_loop().run_in_executor(None, AudioPlayer.play_audio_chunk, audio_data, sr)
+        # Precompute all phoneme chunks before starting playback
+        print(f"Precomputing all phoneme chunks...")
 
-        # Process the audio data in chunks
+        phoneme_data = []  # Store all phoneme chunks for later consumption
+
         for i in range(0, len(audio_data), hop_length_samples):
-            wait_for = hop_length_samples / sr
-
             if len(audio_data) - i < window_size_samples:
-                print("End of audio data")
+                print("End of audio data during precomputation")
                 break
 
-            segment = audio_data[i: i + window_size_samples]
+            segment = audio_data[i:i + window_size_samples]
             mfcc = self.audio_processor.compute_mfcc(segment)
-            assert any(mfcc is not None for mfcc in phonemes_mfcc.values()), "One of the phonemes MFCC is None."
             classified_phoneme = self.audio_processor.classify_phoneme(phonemes_mfcc, mfcc)
+            phoneme_data.append((classified_phoneme, segment))
 
-            if classified_phoneme != last_phoneme:
-                print(f"Time: {time_stamp} - Phoneme: {classified_phoneme}")
-                last_phoneme = classified_phoneme
+        print(f"Precomputed {len(phoneme_data)} phoneme chunks")
 
-            time_stamp += hop_length_samples / sr
-            counter += 1
-            if counter % 100 == 0:
-                print(f"Time: {time_stamp} - Phoneme: {classified_phoneme}")
+        # Start audio playback after precomputing all phonemes
+        print("Starting playback...")
+        asyncio.get_event_loop().run_in_executor(None, AudioPlayer.play_audio_chunk, audio_data, sr)
+
+        # Sync the precomputed phonemes with the real-time audio playback
+        start_time = time.time()
+
+        for i, (classified_phoneme, segment) in enumerate(phoneme_data):
+            expected_time = i * sleep_time
+            current_time = time.time() - start_time
+
+            if current_time < expected_time:
+                await asyncio.sleep(expected_time - current_time)
 
             amp = self.audio_processor.amplify_calculation(segment)
             await self.update_mouth_based_on_phonemes(classified_phoneme, amp_factor=amp)
 
-            await asyncio.sleep(wait_for/sleep_offset)
-
+        print(f"LipSync End At: {time.strftime('%H:%M:%S', time.localtime(time.time()))}")
         await self.close()
