@@ -1,9 +1,13 @@
 name: Publish Python Package to PyPI
 
 on:
+  release:
+    types: [published]
   push:
+    branches:
+      - main
     tags:
-      - 'v*'
+      - v*
 
 jobs:
   publish:
