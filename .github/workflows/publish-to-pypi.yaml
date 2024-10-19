@@ -3,7 +3,7 @@ name: Publish Python Package to PyPI
 on:
   push:
     tags:
-      - v*
+      - v*.*.*
 
 jobs:
   publish:
@@ -13,28 +13,7 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Build and publish to pypi
+        uses: JRubics/poetry-publish@v2.0
         with:
-          python-version: 3.12.6  # Use the same version you're using locally
-
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi
-
-      - name: Build the package
-        run: poetry build
-
-      - name: Publish to PyPI
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
-        run: poetry publish --build --no-interaction --no-ansi -vvv
-
-      - name: Check Poetry Configuration (for debugging)
-        run: |
-          cat /home/runner/.config/pypoetry/config.toml || echo "No config.toml"
-          cat /home/runner/.config/pypoetry/auth.toml || echo "No auth.toml"
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
