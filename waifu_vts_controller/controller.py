@@ -24,13 +24,14 @@ class VTSController:
 
 
 async def main():
+    char = 'jessica_clone'
     phoneme_paths = {
-        "a": "./local/mels/0_a.mp3",
-        "i": "./local/mels/1_i.mp3",
-        "u": "./local/mels/2_u.mp3",
-        "e": "./local/mels/3_e.mp3",
-        "o": "./local/mels/4_o.mp3",
-        "n": "./local/mels/5_n.mp3"
+        "a": f"./local/mels/{char}/0_a.mp3",
+        "i": f"./local/mels/{char}/1_i.mp3",
+        "u": f"./local/mels/{char}/2_u.mp3",
+        "e": f"./local/mels/{char}/3_e.mp3",
+        "o": f"./local/mels/{char}/4_o.mp3",
+        "n": f"./local/mels/{char}/5_n.mp3"
     }
 
     plugin_info = {
@@ -39,7 +40,7 @@ async def main():
         "authentication_token_path": "./token.txt",
     }
     
-    audio_file_path = "./local/samples/0_rachel.mp3"
+    audio_file_path = "./local/samples/conversation.mp3"
 
     # Create the VTSController instance
     controller = VTSController(plugin_info=plugin_info)
