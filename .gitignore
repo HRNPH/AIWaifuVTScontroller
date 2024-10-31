@@ -3,3 +3,4 @@ local/
 __pycache__/
 .venv/
 dist/
+.DS_Store
