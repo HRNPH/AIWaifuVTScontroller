@@ -10,16 +10,27 @@ from waifu_vts_controller.audio.utils import AudioPlayer
 
 # audio
 class AudioProcessor:
-    def __init__(self, sample_rate: int = None, n_mfcc: int = 13, window_size: float = 0.25, hop_length: float = 0.125):
+    """Class to process audio data and extract features using the Mel-frequency cepstral coefficients (MFCC) algorithm.
+    The MFCC features are enriched with chroma and spectral contrast features to improve the classification accuracy.
+    """
+    def __init__(self, sample_rate: Union[int, None] = None, n_mfcc: int = 13, window_size: float = 0.25, hop_length: float = 0.125):
         self.sample_rate = sample_rate
         self.n_mfcc = n_mfcc
         self.window_size = window_size
         self.hop_length = hop_length
         
+        # Exception
+        self.__exception = {
+            "buffer_invalid": "Audio buffer contains invalid values (NaN or infinity).",
+            "buffer_empty": "Audio buffer is empty.",
+            "buffer_zero_max": "Audio buffer has zero maximum value.",
+            "sample_rate_invalid": "Sample rate must be a positive integer value.",
+        }
+        
     def compute_mfcc(self, audio_data: np.ndarray) -> Union[np.ndarray, None]:
         """Compute the Mel-frequency cepstral coefficients (MFCC) of the audio data, with additional chroma and spectral contrast features."""
         if not np.isfinite(audio_data).all():
-            raise ValueError("Audio buffer contains invalid values (NaN or infinity).")
+            raise ValueError(self.__exception["buffer_invalid"])
         
         if not np.any(audio_data):
             return None
@@ -28,7 +39,7 @@ class AudioProcessor:
         if max_val > 0:
             audio_data = audio_data / max_val
         else:
-            raise ValueError("Audio data has zero maximum value, cannot normalize.")
+            raise ValueError(self.__exception["buffer_zero_max"])
 
         # Apply noise reduction using preemphasis
         audio_data = librosa.effects.preemphasis(audio_data)
@@ -37,6 +48,9 @@ class AudioProcessor:
         hop_length_samples = int(self.hop_length * self.sample_rate)
 
         # Compute MFCC
+        if not self.sample_rate:
+            raise ValueError("Sample rate must be specified to compute")
+
         mfcc = librosa.feature.mfcc(
             y=audio_data,
             sr=self.sample_rate,
@@ -63,7 +77,7 @@ class AudioProcessor:
 
     def compute_mfcc_from_file(self, file_path: str) -> Union[np.ndarray, None]:
         audio_data, sr = librosa.load(file_path, sr=self.sample_rate)
-        self.sample_rate = sr if self.sample_rate is None else self.sample_rate
+        self.sample_rate = int(sr) if self.sample_rate is None else self.sample_rate
         return self.compute_mfcc(audio_data)
 
     def normalize_mfcc(self, mfcc: np.ndarray) -> np.ndarray:
@@ -101,7 +115,7 @@ class AudioProcessor:
             distance, _ = fastdtw(mfcc_to_classify.T, known_mfcc.T, dist=euclidean)
             phoneme_distances[phoneme] = distance
 
-        return min(phoneme_distances, key=phoneme_distances.get)
+        return min(phoneme_distances, key=lambda k: phoneme_distances[k])
 
     def amplify_calculation(self, audio_chunk: np.ndarray) -> float:
         amplitude = np.max(np.abs(audio_chunk))
@@ -183,8 +197,8 @@ class VTSAudioController:
 
         # Precompute the MFCC for each phoneme
         phonemes_mfcc = {
-            phoneme: self.audio_processor.compute_mfcc_from_file(path) 
-            for phoneme, path in phoneme_files.items()
+            phoneme: mfcc for phoneme, path in phoneme_files.items()
+            if (mfcc := self.audio_processor.compute_mfcc_from_file(path)) is not None
         }
 
         # Load the audio data
@@ -192,7 +206,7 @@ class VTSAudioController:
             audio_data, sr = librosa.load(audio_path, sr=None)
         else:
             audio_data = audio_path
-            sr = self.audio_processor.sample_rate
+            sr = int(self.audio_processor.sample_rate) if self.audio_processor.sample_rate is not None else sr
 
         sr = int(sr)
         self.audio_processor.sample_rate = sr
