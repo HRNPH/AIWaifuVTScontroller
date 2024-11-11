@@ -189,7 +189,7 @@ class VTSAudioController:
 
     async def play_audio_with_mouth_movement(
         self,
-        audio_path: Union[str, np.ndarray],
+        audio: Union[str, np.ndarray],
         phoneme_files: Dict[Literal["a", "i", "u", "e", "o", "n"], str]
     ):
         await self.connect()
@@ -202,10 +202,10 @@ class VTSAudioController:
         }
 
         # Load the audio data
-        if isinstance(audio_path, str):
-            audio_data, sr = librosa.load(audio_path, sr=None)
+        if isinstance(audio, str):
+            audio_data, sr = librosa.load(audio, sr=None)
         else:
-            audio_data = audio_path
+            audio_data = audio
             sr = int(self.audio_processor.sample_rate) if self.audio_processor.sample_rate is not None else sr
 
         sr = int(sr)
